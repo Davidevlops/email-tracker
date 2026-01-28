@@ -1,0 +1,105 @@
+<!-- templates/notification.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Opened Notification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .info-box {
+            background: white;
+            border-left: 4px solid #667eea;
+            gap: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .location-icon {
+            color: #667eea;
+            margin-right: 8px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📧 Email Opened</h1>
+        <p>Your email has been opened by the recipient</p>
+    </div>
+    
+    <div class="content">
+        <h2>Email Details</h2>
+        <div class="info-box">
+            <strong>Subject:</strong> {{.EmailSubject}}<br>
+            <strong>Recipient:</strong> {{.Recipient}}<br>
+            <strong>Opened At:</strong> {{.OpenedAt}}
+        </div>
+        
+        <h2>Tracking Information</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h3>📍 Location</h3>
+                <p>{{.Location}}</p>
+            </div>
+            <div class="stat-item">
+                <h3>🌐 IP Address</h3>
+                <p>{{.IPAddress}}</p>
+            </div>
+            <div class="stat-item">
+                <h3>💻 Device</h3>
+                <p>{{.Device}} / {{.OS}}</p>
+            </div>
+            <div class="stat-item">
+                <h3>🔍 Browser</h3>
+                <p>{{.Browser}}</p>
+            </div>
+            <div class="stat-item">
+                <h3>📡 ISP</h3>
+                <p>{{.ISP}}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated notification from Email Tracker System.</p>
+        <p>© {{.Year}} Email Tracker. All rights reserved.</p>
+    </div>
+</body>
+</html>
