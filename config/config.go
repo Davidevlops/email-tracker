@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -39,6 +41,11 @@ type Config struct {
 
 // LoadConfig reads config directly from environment variables
 func LoadConfig() *Config {
+	// Load environment variables (optional in production)
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found")
+	}
+
 	cfg := &Config{}
 
 	// Server
