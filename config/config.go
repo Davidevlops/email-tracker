@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -35,7 +36,6 @@ type Config struct {
 		URL      string `yaml:"url"`
 	} `yaml:"geo_api"`
 
-	// New fields for tracking
 	App struct {
 		Env        string `yaml:"env"`
 		BaseURL    string `yaml:"base_url"`
@@ -43,89 +43,88 @@ type Config struct {
 	} `yaml:"app"`
 }
 
+// LoadConfig reads YAML, expands env vars inside, then overrides with env vars
 func LoadConfig(configPath string) (*Config, error) {
 	config := &Config{}
 
-	// Load YAML config first
-	file, err := os.Open(configPath)
+	// Read YAML file as raw string
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
 
-	decoder := yaml.NewDecoder(file)
-	if err := decoder.Decode(config); err != nil {
+	// Expand any ${ENV_VAR} placeholders in the YAML
+	expanded := os.ExpandEnv(string(data))
+
+	// Decode YAML into struct
+	if err := yaml.Unmarshal([]byte(expanded), config); err != nil {
 		return nil, err
 	}
 
-	// Override with environment variables
+	// Finally, override important values from environment variables directly
 	config.overrideWithEnvVars()
 
 	return config, nil
 }
 
+// overrideWithEnvVars ensures production Render env vars take precedence
 func (c *Config) overrideWithEnvVars() {
-	// Server settings
-	if port := GetEnv("PORT", ""); port != "" {
+	if port := os.Getenv("PORT"); port != "" {
 		c.Server.Port = port
 	}
-	if host := GetEnv("HOST", ""); host != "" {
+	if host := os.Getenv("HOST"); host != "" {
 		c.Server.Host = host
 	}
 
-	// App settings - these are the key ones for your tracking pixel
-	if env := GetEnv("APP_ENV", ""); env != "" {
+	if env := os.Getenv("APP_ENV"); env != "" {
 		c.App.Env = env
-	} else if c.App.Env == "" {
-		c.App.Env = "development" // Default
 	}
-
-	if baseURL := GetEnv("BASE_URL", ""); baseURL != "" {
+	if baseURL := os.Getenv("BASE_URL"); baseURL != "" {
 		c.App.BaseURL = baseURL
-	} else if c.App.BaseURL == "" && c.App.Env == "production" {
-		// In production without BASE_URL set, you might want to log a warning
-		log.Printf("WARNING: BASE_URL not set in production environment")
 	}
-
-	if trackingID := GetEnv("TRACKING_ID", ""); trackingID != "" {
+	if trackingID := os.Getenv("TRACKING_ID"); trackingID != "" {
 		c.App.TrackingID = trackingID
 	}
 
-	// Existing overrides (keep your existing structure)
-	if smtpHost := GetEnv("SMTP_HOST", ""); smtpHost != "" {
+	if smtpHost := os.Getenv("SMTP_HOST"); smtpHost != "" {
 		c.SMTP.Host = smtpHost
 	}
-	// ... add other existing env overrides as needed
-}
-
-func GetEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+	if smtpPort := os.Getenv("SMTP_PORT"); smtpPort != "" {
+		// Convert string to int safely
+		if port, err := strconv.Atoi(smtpPort); err == nil {
+			c.SMTP.Port = port
+		}
 	}
-	return defaultValue
+	if smtpUser := os.Getenv("SMTP_USERNAME"); smtpUser != "" {
+		c.SMTP.Username = smtpUser
+		c.SMTP.From = smtpUser // keep From in sync
+	}
+	if smtpPass := os.Getenv("SMTP_PASSWORD"); smtpPass != "" {
+		c.SMTP.Password = smtpPass
+	}
 }
 
+// MustLoadConfig is a helper for fatal errors
 func MustLoadConfig(configPath string) *Config {
-	config, err := LoadConfig(configPath)
+	cfg, err := LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	return config
+	return cfg
 }
 
+// GetBaseURL returns the correct URL depending on env
 func (c *Config) GetBaseURL(requestHost string) string {
 	if c.App.BaseURL != "" {
 		return c.App.BaseURL
 	}
 
 	if c.App.Env == "production" && c.Server.Host != "" {
-		// In production, assume HTTPS
 		if !strings.HasPrefix(c.Server.Host, "http") {
 			return "https://" + c.Server.Host
 		}
 		return c.Server.Host
 	}
 
-	// Default to development URL
 	return "http://localhost:" + c.Server.Port
 }
