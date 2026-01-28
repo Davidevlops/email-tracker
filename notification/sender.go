@@ -110,7 +110,10 @@ func (s *Sender) SendEmail(
 	e.To = to
 	e.Subject = subject
 	e.HTML = []byte(body)
-
+	fmt.Println("e.From", e.From)
+	fmt.Println("e.To", e.To)
+	fmt.Println("e.Subject", e.Subject)
+	fmt.Println("e.HTML", e.HTML)
 	addr := fmt.Sprintf("%s:%d", s.config.SMTP.Host, s.config.SMTP.Port)
 
 	// Note: Gmail requires the host in PlainAuth to match the server address
@@ -120,7 +123,8 @@ func (s *Sender) SendEmail(
 		s.config.SMTP.Password,
 		s.config.SMTP.Host,
 	)
-
+	fmt.Println("addr", addr)
+	fmt.Println("auth", auth)
 	// Context for the entire operation
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
