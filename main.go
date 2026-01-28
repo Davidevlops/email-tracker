@@ -244,7 +244,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func main() {
 	// Load configuration
-	cfg := config.MustLoadConfig("config/config.yaml")
+	cfg := config.MustLoadConfig()
 
 	// Log config status
 	log.Printf("Configuration loaded successfully")

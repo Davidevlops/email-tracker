@@ -5,115 +5,91 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Server struct {
-		Port string `yaml:"port"`
-		Host string `yaml:"host"`
-	} `yaml:"server"`
-
+		Port string
+		Host string
+	}
 	SMTP struct {
-		Host     string `yaml:"host"`
-		Port     int    `yaml:"port"`
-		Username string `yaml:"username"`
-		Password string `yaml:"password"`
-		From     string `yaml:"from"`
-	} `yaml:"smtp"`
-
+		Host     string
+		Port     int
+		Username string
+		Password string
+		From     string
+	}
 	Redis struct {
-		Host     string `yaml:"host"`
-		Port     int    `yaml:"port"`
-		Password string `yaml:"password"`
-		DB       int    `yaml:"db"`
-	} `yaml:"redis"`
-
+		Host     string
+		Port     int
+		Password string
+		DB       int
+	}
 	GeoAPI struct {
-		Provider string `yaml:"provider"`
-		APIKey   string `yaml:"api_key"`
-		URL      string `yaml:"url"`
-	} `yaml:"geo_api"`
-
+		Provider string
+		APIKey   string
+		URL      string
+	}
 	App struct {
-		Env        string `yaml:"env"`
-		BaseURL    string `yaml:"base_url"`
-		TrackingID string `yaml:"tracking_id"`
-	} `yaml:"app"`
-}
-
-// LoadConfig reads YAML, expands env vars inside, then overrides with env vars
-func LoadConfig(configPath string) (*Config, error) {
-	config := &Config{}
-
-	// Read YAML file as raw string
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Expand any ${ENV_VAR} placeholders in the YAML
-	expanded := os.ExpandEnv(string(data))
-
-	// Decode YAML into struct
-	if err := yaml.Unmarshal([]byte(expanded), config); err != nil {
-		return nil, err
-	}
-
-	// Finally, override important values from environment variables directly
-	config.overrideWithEnvVars()
-
-	return config, nil
-}
-
-// overrideWithEnvVars ensures production Render env vars take precedence
-func (c *Config) overrideWithEnvVars() {
-	if port := os.Getenv("PORT"); port != "" {
-		c.Server.Port = port
-	}
-	if host := os.Getenv("HOST"); host != "" {
-		c.Server.Host = host
-	}
-
-	if env := os.Getenv("APP_ENV"); env != "" {
-		c.App.Env = env
-	}
-	if baseURL := os.Getenv("BASE_URL"); baseURL != "" {
-		c.App.BaseURL = baseURL
-	}
-	if trackingID := os.Getenv("TRACKING_ID"); trackingID != "" {
-		c.App.TrackingID = trackingID
-	}
-
-	if smtpHost := os.Getenv("SMTP_HOST"); smtpHost != "" {
-		c.SMTP.Host = smtpHost
-	}
-	if smtpPort := os.Getenv("SMTP_PORT"); smtpPort != "" {
-		// Convert string to int safely
-		if port, err := strconv.Atoi(smtpPort); err == nil {
-			c.SMTP.Port = port
-		}
-	}
-	if smtpUser := os.Getenv("SMTP_USERNAME"); smtpUser != "" {
-		c.SMTP.Username = smtpUser
-		c.SMTP.From = smtpUser // keep From in sync
-	}
-	if smtpPass := os.Getenv("SMTP_PASSWORD"); smtpPass != "" {
-		c.SMTP.Password = smtpPass
+		Env        string
+		BaseURL    string
+		TrackingID string
 	}
 }
 
-// MustLoadConfig is a helper for fatal errors
-func MustLoadConfig(configPath string) *Config {
-	cfg, err := LoadConfig(configPath)
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
+// LoadConfig reads config directly from environment variables
+func LoadConfig() *Config {
+	cfg := &Config{}
+
+	// Server
+	cfg.Server.Port = getEnv("PORT", "8080")
+	cfg.Server.Host = getEnv("HOST", "0.0.0.0")
+
+	// App
+	cfg.App.Env = getEnv("APP_ENV", "development")
+	cfg.App.BaseURL = getEnv("BASE_URL", "")
+	cfg.App.TrackingID = getEnv("TRACKING_ID", "dev_track_001")
+
+	// SMTP
+	cfg.SMTP.Host = getEnv("SMTP_HOST", "smtp.gmail.com")
+	cfg.SMTP.Port = getEnvAsInt("SMTP_PORT", 587)
+	cfg.SMTP.Username = getEnv("SMTP_USERNAME", "")
+	cfg.SMTP.Password = getEnv("SMTP_PASSWORD", "")
+	cfg.SMTP.From = cfg.SMTP.Username
+
+	// Redis
+	cfg.Redis.Host = getEnv("REDIS_HOST", "localhost")
+	cfg.Redis.Port = getEnvAsInt("REDIS_PORT", 6379)
+	cfg.Redis.Password = getEnv("REDIS_PASSWORD", "")
+	cfg.Redis.DB = getEnvAsInt("REDIS_DB", 0)
+
+	// Geo API
+	cfg.GeoAPI.Provider = getEnv("GEO_PROVIDER", "ip-api")
+	cfg.GeoAPI.APIKey = getEnv("GEO_API_KEY", "")
+	cfg.GeoAPI.URL = getEnv("GEO_URL", "http://ip-api.com/json/")
+
 	return cfg
 }
 
-// GetBaseURL returns the correct URL depending on env
+// Helper: string env
+func getEnv(key, defaultVal string) string {
+	if val, exists := os.LookupEnv(key); exists {
+		return val
+	}
+	return defaultVal
+}
+
+// Helper: int env
+func getEnvAsInt(key string, defaultVal int) int {
+	if valStr, exists := os.LookupEnv(key); exists {
+		if val, err := strconv.Atoi(valStr); err == nil {
+			return val
+		}
+	}
+	return defaultVal
+}
+
+// GetBaseURL returns correct base URL for email tracking
 func (c *Config) GetBaseURL(requestHost string) string {
 	if c.App.BaseURL != "" {
 		return c.App.BaseURL
@@ -127,4 +103,13 @@ func (c *Config) GetBaseURL(requestHost string) string {
 	}
 
 	return "http://localhost:" + c.Server.Port
+}
+
+// MustLoadConfig helper
+func MustLoadConfig() *Config {
+	cfg := LoadConfig()
+	if cfg.SMTP.Username == "" || cfg.SMTP.Password == "" {
+		log.Println("WARNING: SMTP credentials are missing")
+	}
+	return cfg
 }
