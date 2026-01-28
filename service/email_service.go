@@ -26,7 +26,12 @@ func NewEmailService(cfg *config.Config, tr *tracker.Tracker, nt *notification.S
 	}
 }
 
-func (s *EmailService) SendTrackedEmail(ctx context.Context, req *models.EmailRequest, baseURL string) (string, error) {
+func (s *EmailService) SendTrackedEmail(
+	ctx context.Context,
+	req *models.EmailRequest,
+	baseURL string,
+) (string, error) {
+
 	// Generate tracking ID
 	trackingID, err := s.tracker.GenerateTrackingID()
 	if err != nil {
@@ -38,8 +43,17 @@ func (s *EmailService) SendTrackedEmail(ctx context.Context, req *models.EmailRe
 	if err != nil {
 		return "", fmt.Errorf("failed to embed tracking pixel: %w", err)
 	}
-	// Send the email
-	if err := s.notifier.SendEmail(ctx, req.To, req.Subject, trackedBody); err != nil {
+
+	emailCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Send email
+	if err := s.notifier.SendEmail(
+		emailCtx,
+		req.To,
+		req.Subject,
+		trackedBody,
+	); err != nil {
 		return "", fmt.Errorf("failed to send email: %w", err)
 	}
 

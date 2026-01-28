@@ -83,7 +83,8 @@ func (t *Tracker) TrackEmailOpen(w http.ResponseWriter, r *http.Request, trackin
 	deviceInfo := utils.ParseUserAgent(userAgent)
 
 	var emailID string
-	if email, exists := t.trackingData[trackingID]; exists {
+	email, exists := t.trackingData[trackingID]
+	if exists {
 		emailID = email.ID
 	}
 
@@ -109,15 +110,36 @@ func (t *Tracker) TrackEmailOpen(w http.ResponseWriter, r *http.Request, trackin
 	fmt.Printf("📧 Email opened - Tracking ID: %s, BaseURL: %s, IP: %s, Location: %s, %s\n",
 		trackingID, baseURL, ip, event.City, event.Country)
 
-	if email, exists := t.trackingData[trackingID]; exists && email.NotifyOnOpen {
-		go t.sendNotification(email, event)
+	// Send notification if needed
+	if exists && email.NotifyOnOpen {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := t.notificationSender.SendNotification(ctx, []string{email.NotifyEmail},
+			fmt.Sprintf("📧 Email Opened: %s", email.Subject),
+			map[string]interface{}{
+				"EmailSubject": email.Subject,
+				"Recipient":    email.To,
+				"OpenedAt":     event.OpenedAt.Format("2006-01-02 15:04:05"),
+				"IPAddress":    event.IPAddress,
+				"Location":     fmt.Sprintf("%s, %s, %s", event.City, event.Region, event.Country),
+				"Device":       event.DeviceType,
+				"Browser":      event.Browser,
+				"OS":           event.OS,
+				"ISP":          event.ISP,
+				"TrackingURL":  fmt.Sprintf("%s/track/%s", event.BaseURL, event.TrackingID),
+				"BaseURL":      event.BaseURL,
+				"Year":         event.OpenedAt.Year(),
+			}); err != nil {
+			fmt.Printf("Failed to send notification: %v\n", err)
+		}
 	}
 
+	// Serve tracking pixel
 	w.Header().Set("Content-Type", "image/gif")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
-
 	w.Write(gifData)
 }
 
@@ -131,9 +153,10 @@ var gifData = []byte{
 }
 
 func (t *Tracker) sendNotification(email *models.Email, event *models.TrackingEvent) {
-	ctx := context.Background()
+	// Subject for the notification email
 	subject := fmt.Sprintf("📧 Email Opened: %s", email.Subject)
 
+	// Prepare template data
 	data := map[string]interface{}{
 		"EmailSubject": email.Subject,
 		"Recipient":    email.To,
@@ -149,7 +172,13 @@ func (t *Tracker) sendNotification(email *models.Email, event *models.TrackingEv
 		"Year":         event.OpenedAt.Year(),
 	}
 
+	// Recipients
 	recipients := []string{email.NotifyEmail}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Send the notification email
 	if err := t.notificationSender.SendNotification(ctx, recipients, subject, data); err != nil {
 		fmt.Printf("Failed to send notification: %v\n", err)
 	}
