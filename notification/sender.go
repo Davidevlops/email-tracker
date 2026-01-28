@@ -126,8 +126,8 @@ func (s *Sender) SendEmail(
 	fmt.Println("addr", addr)
 	fmt.Println("auth", auth)
 	// Context for the entire operation
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+	// timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	// defer cancel()
 
 	errCh := make(chan error, 1)
 
@@ -144,14 +144,22 @@ func (s *Sender) SendEmail(
 		)
 	}()
 
-	select {
-	case <-timeoutCtx.Done():
-		return fmt.Errorf("email send timed out: %w", timeoutCtx.Err())
+	// select {
+	// case <-timeoutCtx.Done():
+	// 	return fmt.Errorf("email send timed out: %w", timeoutCtx.Err())
 
+	// case err := <-errCh:
+	// 	if err != nil {
+	// 		return fmt.Errorf("smtp authentication/sending failed: %w", err)
+	// 	}
+	// }
+	select {
 	case err := <-errCh:
 		if err != nil {
 			return fmt.Errorf("smtp authentication/sending failed: %w", err)
 		}
+	case <-time.After(12 * time.Second):
+		return fmt.Errorf("smtp send hung and was force-aborted")
 	}
 
 	return nil
