@@ -76,6 +76,8 @@ func NewServer(cfg *config.Config) *Server {
 }
 
 func (s *Server) setupRoutes() {
+
+	s.router.GET("/", s.entryPoint)
 	// Health check
 	s.router.GET("/health", s.healthCheck)
 
@@ -111,6 +113,19 @@ func (s *Server) baseURLMiddleware() gin.HandlerFunc {
 	}
 }
 
+func (s *Server) entryPoint(c *gin.Context) {
+	// Get BaseURL from context
+	baseURL, _ := c.Get("baseURL")
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":      "Welcome to email tracker service",
+		"service":     "email-tracker",
+		"version":     "1.0.0",
+		"environment": s.config.App.Env,
+		"base_url":    baseURL,
+		"tracking_id": s.config.App.TrackingID,
+	})
+}
 func (s *Server) healthCheck(c *gin.Context) {
 	// Get BaseURL from context
 	baseURL, _ := c.Get("baseURL")
@@ -124,7 +139,6 @@ func (s *Server) healthCheck(c *gin.Context) {
 		"tracking_id": s.config.App.TrackingID,
 	})
 }
-
 func (s *Server) trackEmailOpen(c *gin.Context) {
 	trackingID := c.Param("id")
 
