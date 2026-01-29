@@ -37,6 +37,9 @@ type Config struct {
 		BaseURL    string
 		TrackingID string
 	}
+	ExternalAPI struct {
+		Resend string
+	}
 }
 
 // LoadConfig reads config directly from environment variables
@@ -60,9 +63,9 @@ func LoadConfig() *Config {
 	// SMTP
 	cfg.SMTP.Host = getEnv("SMTP_HOST", "smtp.gmail.com")
 	cfg.SMTP.Port = getEnvAsInt("SMTP_PORT", 587)
-	cfg.SMTP.Username = getEnv("SMTP_USERNAME", "")
+	cfg.SMTP.Username = getEnv("SMTP_USER", "")
 	cfg.SMTP.Password = getEnv("SMTP_PASSWORD", "")
-	cfg.SMTP.From = cfg.SMTP.Username
+	cfg.SMTP.From = getEnv("SMTP_FROM", "")
 
 	// Redis
 	cfg.Redis.Host = getEnv("REDIS_HOST", "localhost")
@@ -74,6 +77,9 @@ func LoadConfig() *Config {
 	cfg.GeoAPI.Provider = getEnv("GEO_PROVIDER", "ip-api")
 	cfg.GeoAPI.APIKey = getEnv("GEO_API_KEY", "")
 	cfg.GeoAPI.URL = getEnv("GEO_URL", "http://ip-api.com/json/")
+
+	// External API
+	cfg.ExternalAPI.Resend = getEnv("RESEND_API", "")
 
 	return cfg
 }
