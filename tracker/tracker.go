@@ -133,6 +133,8 @@ func (t *Tracker) TrackEmailOpen(w http.ResponseWriter, r *http.Request, trackin
 			}); err != nil {
 			fmt.Printf("Failed to send notification: %v\n", err)
 		}
+	} else {
+		fmt.Printf("No notification sent for Tracking ID: %s (NotifyOnOpen: %v)\n", trackingID, exists && email.NotifyOnOpen)
 	}
 
 	// Serve tracking pixel

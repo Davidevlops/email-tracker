@@ -103,12 +103,27 @@ func (s *Server) setupRoutes() {
 // Middleware to inject BaseURL into context
 func (s *Server) baseURLMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get BaseURL dynamically based on request
-		baseURL := s.config.GetBaseURL(c.Request.Host)
 
-		// Store it in context for use in handlers/templates
+		scheme := "http"
+		host := c.Request.Host
+
+		// Handle HTTPS correctly
+		if c.Request.TLS != nil {
+			scheme = "https"
+		}
+
+		// Respect reverse proxy headers
+		if proto := c.GetHeader("X-Forwarded-Proto"); proto != "" {
+			scheme = proto
+		}
+
+		if forwardedHost := c.GetHeader("X-Forwarded-Host"); forwardedHost != "" {
+			host = forwardedHost
+		}
+
+		baseURL := fmt.Sprintf("%s://%s", scheme, host)
+
 		c.Set("baseURL", baseURL)
-
 		c.Next()
 	}
 }
@@ -208,14 +223,14 @@ func (s *Server) dashboard(c *gin.Context) {
 }
 
 // Helper function to get dynamic BaseURL for templates
-func (s *Server) getDynamicBaseURL(c *gin.Context) string {
-	baseURL, exists := c.Get("baseURL")
-	if exists {
-		return baseURL.(string)
-	}
-	// Fallback to config method
-	return s.config.GetBaseURL(c.Request.Host)
-}
+// func (s *Server) getDynamicBaseURL(c *gin.Context) string {
+// 	baseURL, exists := c.Get("baseURL")
+// 	if exists {
+// 		return baseURL.(string)
+// 	}
+// 	// Fallback to config method
+// 	return s.config.GetBaseURL(c.Request.Host)
+// }
 
 func (s *Server) Start() error {
 
