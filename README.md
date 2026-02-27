@@ -109,26 +109,17 @@ Visit `/dashboard` for a web-based overview (basic template, can be extended).
 
 ## Screenshots
 
-### 1. Dashboard Overview
-![Dashboard](Screenshot%202026-02-26%20230133.png)
+### 1. POST Request Overview
+![Postman Post  request](postmanreq.png)
 
 ### 2. Email Sent Confirmation
-![Email Sent](Screenshot%202026-02-26%20230254.png)
+![Email Sent](postmanres.png)
 
-### 3. Tracking Pixel Request
-![Tracking Pixel](Screenshot%202026-02-26%20230324.png)
+### 3. Email Delivery Confirmation
+![Email Sent](email-delivery.png)
 
 ### 4. Notification Email Example
-![Notification Email](Screenshot%202026-02-26%20230408.png)
-
-### 5. Tracking Event Details
-![Tracking Event](Screenshot%202026-02-26%20230440.png)
-
-### 6. Geolocation & Device Analytics
-![Geo & Device](Screenshot%202026-02-27%20111209.png)
-
-### 7. API Usage Example
-![API Usage](Screenshot%202026-02-27%20115410.png)
+![Notification Email](email-notification-for-recipient.png)
 
 ---
 
